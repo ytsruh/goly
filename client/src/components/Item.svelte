@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Goly } from "../routes/+page";
   import { goto } from "$app/navigation";
+  import { feedback } from "./FeedbackStore";
   import Clipboard from "svelte-clipboard";
   import FaPaperclip from "svelte-icons/fa/FaPaperclip.svelte";
   export let data: Goly;
@@ -14,12 +15,15 @@
   async function handleDelete() {
     try {
       await fetch(`/api/goly/${data.id}`, { method: "DELETE" });
+      //Set timeout to make sure DB is updated
       setTimeout(() => {
-        deleteGoly = false;
+        // Invalidate the page data to get a reload
         goto("/", { invalidateAll: true });
-      }, 1000);
+        deleteGoly = false;
+      }, 100);
+      feedback.set("Successfully deleted.");
     } catch (error) {
-      console.log(error);
+      feedback.set("An error has occurred. Please try again.");
     }
   }
 </script>
@@ -28,7 +32,6 @@
   {#if !deleteGoly}
     <div class="flex justify-between">
       <p><span class="text-sky-900 text-bold text-lg">Goly:</span> {data.goly}</p>
-
       <Clipboard
         text={`https://www.goly.com/r/${data.goly}`}
         let:copy
