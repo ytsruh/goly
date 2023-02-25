@@ -1,11 +1,12 @@
 package server
 
 import (
-	"fmt"
 	"goly/model"
 	"goly/utils"
+	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -19,11 +20,16 @@ func redirect(c *fiber.Ctx) error {
 			"message": "could not find goly in DB " + err.Error(),
 		})
 	}
-	// grab any stats you want...
+
+	// Update the stats
 	goly.Clicked += 1
 	err = model.UpdateGoly(goly)
 	if err != nil {
-		fmt.Printf("error updating: %v\n", err)
+		log.Printf("error updating: %v\n", err)
+	}
+	// Check if string contains https or http otheriwse redirect doesn't work
+	if !strings.Contains(goly.Redirect, "http") || !strings.Contains(goly.Redirect, "https") {
+		goly.Redirect = "http://" + goly.Redirect
 	}
 
 	return c.Redirect(goly.Redirect, fiber.StatusTemporaryRedirect)
@@ -124,13 +130,6 @@ func deleteGoly(c *fiber.Ctx) error {
 	})
 }
 
-func handle(c *fiber.Ctx) error {
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "goly home.",
-	})
-}
-
 func SetupAndListen() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -145,13 +144,15 @@ func SetupAndListen() {
 		AllowOrigins: "*",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
-	router.Get("/", handle)
+
+	router.Static("/", "./public")
+
 	router.Get("/r/:redirect", redirect)
-	router.Get("/goly", getAllGolies)
-	router.Get("/goly/:id", getGoly)
-	router.Post("/goly", createGoly)
-	router.Patch("/goly", updateGoly)
-	router.Delete("/goly/:id", deleteGoly)
+	router.Get("/api/goly", getAllGolies)
+	router.Get("/api/goly/:id", getGoly)
+	router.Post("/api/goly", createGoly)
+	router.Patch("/api/goly", updateGoly)
+	router.Delete("/api/goly/:id", deleteGoly)
 
 	router.Listen(port)
 

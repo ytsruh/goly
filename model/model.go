@@ -1,7 +1,7 @@
 package model
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"gorm.io/driver/postgres"
@@ -29,7 +29,7 @@ func Setup() {
 
 	err = db.AutoMigrate(&Goly{})
 	if err != nil {
-		fmt.Println(err)
+		log.Println(err)
 	}
 
 }
