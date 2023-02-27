@@ -7,3 +7,6 @@ tasks:
   tidy:
     cmds:
       - go mod tidy
+  build:
+    cmds:
+      - cd client && npm run build

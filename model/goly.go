@@ -46,3 +46,15 @@ func FindByGolyUrl(url string) (Goly, error) {
 	tx := db.Where("goly = ?", url).First(&goly)
 	return goly, tx.Error
 }
+
+func GetMostPopular() ([]Goly, error) {
+	var golies []Goly
+
+	tx := db.Where("clicked > 5").Order("clicked desc").Limit(10).Find(&golies)
+
+	if tx.Error != nil {
+		return []Goly{}, tx.Error
+	}
+
+	return golies, nil
+}
