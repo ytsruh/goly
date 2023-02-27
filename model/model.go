@@ -24,6 +24,7 @@ func Setup() {
 
 	db, err = gorm.Open(postgres.Open(dburl), &gorm.Config{})
 	if err != nil {
+		log.Println("Error connecting to the Database")
 		panic(err)
 	}
 
@@ -31,5 +32,5 @@ func Setup() {
 	if err != nil {
 		log.Println(err)
 	}
-
+	log.Println("Successfully connected to the Database")
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"log"
 	"time"
 
@@ -25,8 +26,8 @@ var ApiMonitor = monitor.New(monitor.Config{
 })
 
 var RateLimiter = limiter.New(limiter.Config{
-	Max:               20,
-	Expiration:        30 * time.Second,
+	Max:               250,
+	Expiration:        10 * time.Second,
 	LimiterMiddleware: limiter.SlidingWindow{},
 })
 
@@ -49,4 +50,21 @@ func RedirectMiddleware(c *fiber.Ctx) error {
 	log.Println("A redirect has been triggered from IP: " + requestIp)
 	// Go to next middleware:
 	return c.Next()
+}
+
+// Timer will measure how long it takes before a response is returned
+func Timer(c *fiber.Ctx) error {
+	// start timer
+	start := time.Now()
+	// next routes
+	err := c.Next()
+	// stop timer
+	stop := time.Now()
+	// Time taken
+	diff := stop.Sub(start).String()
+	// Do something with response
+	c.Append("Server-Timing", fmt.Sprintf("app;dur=%v", diff))
+	log.Println("Server took " + diff + " to respond.")
+	// return stack error if exist
+	return err
 }

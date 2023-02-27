@@ -1,0 +1,1 @@
+const t=async({fetch:e})=>{try{return{golies:await(await e("/api/goly")).json()}}catch(o){console.log(o)}},r=Object.freeze(Object.defineProperty({__proto__:null,load:t},Symbol.toStringTag,{value:"Module"}));export{r as _,t as l};

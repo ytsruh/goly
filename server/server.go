@@ -5,8 +5,11 @@ import (
 	"goly/utils"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
@@ -130,6 +133,16 @@ func deleteGoly(c *fiber.Ctx) error {
 	})
 }
 
+func GetMostPopular(c *fiber.Ctx) error {
+	golies, err := model.GetMostPopular()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "error getting most popular " + err.Error(),
+		})
+	}
+	return c.Status(fiber.StatusOK).JSON(golies)
+}
+
 func SetupAndListen() {
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -141,6 +154,7 @@ func SetupAndListen() {
 	router := fiber.New(fiber.Config{
 		JSONEncoder: json.Marshal,
 		JSONDecoder: json.Unmarshal,
+		IdleTimeout: 5 * time.Second,
 	})
 
 	// Set up middleware
@@ -151,6 +165,7 @@ func SetupAndListen() {
 	router.Use(RateLimiter)
 	router.Use(Recover)
 	router.Use(Compression)
+	router.Use(Timer)
 	router.Static("/", "./public")
 
 	router.Use("/r", RedirectMiddleware)
@@ -164,8 +179,26 @@ func SetupAndListen() {
 	router.Post("/api/goly", createGoly)
 	router.Patch("/api/goly", updateGoly)
 	router.Delete("/api/goly/:id", deleteGoly)
+	router.Get("/api/popular", GetMostPopular)
 
 	// Start server
-	log.Fatal(router.Listen(port))
+	// Listen from a different goroutine
+	go func() {
+		if err := router.Listen(port); err != nil {
+			log.Panic(err)
+		}
+	}()
+
+	c := make(chan os.Signal, 1)                    // Create channel to signify a signal being sent
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM) // When an interrupt or termination signal is sent, notify the channel
+
+	<-c // This blocks the main thread until an interrupt is received
+	log.Println("Gracefully shutting down...")
+	_ = router.Shutdown()
+
+	log.Println("Running cleanup tasks...")
+
+	// Your cleanup tasks go here
+	log.Println("Fiber was successful shutdown.")
 
 }
