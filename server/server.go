@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 )
@@ -85,7 +86,6 @@ func createGoly(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusOK).JSON(goly)
-
 }
 
 func updateGoly(c *fiber.Ctx) error {
@@ -138,22 +138,34 @@ func SetupAndListen() {
 		port = ":" + port
 	}
 
-	router := fiber.New()
+	router := fiber.New(fiber.Config{
+		JSONEncoder: json.Marshal,
+		JSONDecoder: json.Unmarshal,
+	})
 
+	// Set up middleware
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
-
+	router.Use(RateLimiter)
+	router.Use(Recover)
+	router.Use(Compression)
 	router.Static("/", "./public")
 
+	router.Use("/r", RedirectMiddleware)
+
+	// Set up routes
+	router.Get("/metrics", Monitor)
 	router.Get("/r/:redirect", redirect)
+	router.Get("/api/metrics", ApiMonitor)
 	router.Get("/api/goly", getAllGolies)
 	router.Get("/api/goly/:id", getGoly)
 	router.Post("/api/goly", createGoly)
 	router.Patch("/api/goly", updateGoly)
 	router.Delete("/api/goly/:id", deleteGoly)
 
-	router.Listen(port)
+	// Start server
+	log.Fatal(router.Listen(port))
 
 }
